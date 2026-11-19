@@ -1,0 +1,11 @@
+{
+  "name": "sites-in-the-woods",
+  "owner": { "name": "Geeks in the Woods", "url": "https://geeksinthewoods.com" },
+  "plugins": [
+    {
+      "name": "sites-in-the-woods",
+      "source": "./",
+      "description": "Website monitoring for your team: status, incidents and what's wrong, maintenance windows for deploys."
+    }
+  ]
+}

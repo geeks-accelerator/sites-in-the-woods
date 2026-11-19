@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "sites-in-the-woods": {
+      "type": "http",
+      "url": "https://sitesinthewoods.com/mcp",
+      "headers": { "Authorization": "Bearer ${SITES_IN_THE_WOODS_API_KEY}" }
+    }
+  }
+}

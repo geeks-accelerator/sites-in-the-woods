@@ -1,0 +1,58 @@
+{
+  "name": "sites-in-the-woods",
+  "version": "0.1.0",
+  "description": "The official CLI and SDK for Sites in the Woods, website uptime and AI agent readiness monitoring: your team's status, incidents and domains from the terminal, maintenance windows for deploy scripts, and the hosted MCP server over stdio.",
+  "license": "MIT",
+  "type": "module",
+  "homepage": "https://sitesinthewoods.com/developers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/geeks-accelerator/sites-in-the-woods.git"
+  },
+  "bugs": "https://github.com/geeks-accelerator/sites-in-the-woods/issues",
+  "author": "Geeks in the Woods (https://geeksinthewoods.com)",
+  "mcpName": "com.sitesinthewoods/monitor",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "sites-in-the-woods": "dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:skills": "node scripts/check-skills.mjs"
+  },
+  "keywords": [
+    "sites-in-the-woods",
+    "uptime-monitoring",
+    "website-monitoring",
+    "status",
+    "maintenance-window",
+    "deploy",
+    "cli",
+    "sdk",
+    "mcp",
+    "model-context-protocol",
+    "ai-agents"
+  ],
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

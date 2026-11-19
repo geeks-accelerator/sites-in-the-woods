@@ -1,0 +1,39 @@
+# Stages sites-in-the-woods on npm when a GitHub release tagged v<version> is published,
+# through npm trusted publishing (OIDC): no npm token is stored anywhere. The trusted
+# publisher (npmjs.com, geeks-accelerator/sites-in-the-woods, workflow release.yml) allows
+# staging only, so a maintainer approves each version before it's live: npmjs.com's
+# Staged Packages tab, or `npm stage approve <stage-id>` (both ask for 2FA).
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # trusted publishing; only this job gets it
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          check-latest: true
+          registry-url: https://registry.npmjs.org
+      - run: npm install -g npm@12
+      - run: npm ci && npm run build
+      - name: The release tag matches package.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(node -p "require('./package.json').version")"
+          [ "$tag" = "$version" ] || { echo "Release tag v$tag doesn't match package.json version $version"; exit 1; }
+      - run: npm stage publish
