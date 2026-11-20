@@ -20,12 +20,14 @@ content-type: application/json
 { "url": "example.com" }
 ```
 
-The answer (`201`) has two links:
+The answer says what happened in `outcome`: `started` (`201`, a new monitor) or `already_watching` (`200`: someone started this site before, and these are new links to the same checks, so its history may be older than your request). Tell the person which. It has two links:
 
 - **`results`**: this site's results, for you. Read it with GET (its `data` has uptime, each day's checks and outages). Treat it like a password: never post it anywhere public or send it to another site.
-- **`claim`**: give this one to the person you work for, and only them. When they sign in from it, the site becomes theirs, with its history so far, and they get alerts.
+- **`claim`**: give this one to the person you work for, and only them. When they sign in from it, the site becomes theirs and they get alerts. Its history so far comes with it only if their team has verified the domain; otherwise it starts fresh, and they can bring the history in after verifying.
 
-Until someone claims it, the site is checked every 30 minutes until someone claims it, once a day after 30 days, and deleted after a year unclaimed, and **no one is alerted**. Say so, and don't promise alerts before it's claimed.
+Both answers carry where the checks stand, as fields: `interval_seconds`, `last_checked_at`, `next_check_at` and `alerts_enabled` (false until it's claimed). The site is checked every 30 minutes until someone claims it, once a day after 30 days, and deleted after a year unclaimed, and **no one is alerted** until it's claimed. Say so, and don't promise alerts before it's claimed.
+
+When you no longer need the results link, `POST` to it with `/forget` on the end: only that link stops working, and the checks go on until the site is claimed or its year runs out.
 
 Errors come as problem details with `error` and `message`: `validation_error` (the address isn't a public domain), `conflict` (the owner asked us not to look, or the domain already has 3 sites waiting), `rate_limited` (wait for `Retry-After`). Don't retry a `conflict`: give the person the start link instead.
 
