@@ -60,7 +60,7 @@ Agent apps that take a remote server can use `https://sitesinthewoods.com/mcp` d
 
 ## Skills and plugins
 
-`skills/` holds our four agent skills, the same files [sitesinthewoods.com](https://sitesinthewoods.com/skills) serves. Install them with `npx skills add geeks-accelerator/sites-in-the-woods`. This repository is also an [Agent Plugin](https://agent-plugins.org) (`plugin.json`, `mcp.json`) and a Claude Code plugin marketplace: `/plugin marketplace add geeks-accelerator/sites-in-the-woods`.
+`skills/` holds our five agent skills, the same files [sitesinthewoods.com](https://sitesinthewoods.com/skills) serves. Install them with `npx skills add geeks-accelerator/sites-in-the-woods`. This repository is also an [Agent Plugin](https://agent-plugins.org) (`plugin.json`, `mcp.json`) and a Claude Code plugin marketplace: `/plugin marketplace add geeks-accelerator/sites-in-the-woods`.
 
 ## License
 
