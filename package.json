@@ -1,6 +1,6 @@
 {
   "name": "sites-in-the-woods",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The official CLI and SDK for Sites in the Woods, website uptime and AI agent readiness monitoring: your team's status, incidents and domains from the terminal, maintenance windows for deploy scripts, and the hosted MCP server over stdio.",
   "license": "MIT",
   "type": "module",
