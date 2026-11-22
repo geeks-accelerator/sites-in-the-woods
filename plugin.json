@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "sites-in-the-woods",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Sites in the Woods for agents: five skills (public status, starting to watch a site without an account, connecting, what's wrong, maintenance windows) and the monitoring MCP server, through the official CLI's stdio bridge so the API key stays in SITES_IN_THE_WOODS_API_KEY.",
   "author": { "name": "Geeks in the Woods", "url": "https://geeksinthewoods.com" },
   "homepage": "https://sitesinthewoods.com/developers",

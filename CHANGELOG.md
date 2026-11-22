@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.0
 
-`check <domain>` in the CLI and `check()` in the SDK: one look at any site through the free check (`POST /check`), scored A to F, with what it covers, each fix and the report's address. It needs no key, and the key is never sent. `--private` keeps the report off the domain's public page.
+`check <domain>` in the CLI and `check()` in the SDK: one look at any site through the free check (`POST /check`), scored A to F, with what it covers, each fix and the report's address. It needs no key, and the key is never sent. `--private` keeps the report off the domain's public page. The start skill as served on 2026-11-22: it names the free check from code, and how the person verifies their domain (`/docs#verify`). The plugin manifests are at 0.3.0.
 
 ## 0.2.0
 

@@ -11,6 +11,10 @@ Sites in the Woods watches websites from the outside. One site is free. Someone 
 
 `https://sitesinthewoods.com/start?url=<their domain>`, for example `https://sitesinthewoods.com/start?url=example.com`. They sign in (that makes their account), name their team, and click Add: their site is then checked every 5 minutes, with alerts to their email when it's down.
 
+## If you want to see what search engines and agents find first
+
+`POST https://sitesinthewoods.com/check` with JSON `{"domain": "example.com"}` looks once (add `"private": true` to keep the report off the domain's public page). The answer is the report: a score, what it covers, and each finding with its fix, plus its `markdown` address, which lists the fixes for a coding agent. One look per domain every 10 minutes; a newer report is answered instead (`fresh`). It's a one-time look, not monitoring: no one is alerted.
+
 ## If you want results first: start it yourself
 
 ```
@@ -23,7 +27,7 @@ content-type: application/json
 The answer says what happened in `outcome`: `started` (`201`, a new monitor) or `already_watching` (`200`: someone started this site before, and these are new links to the same checks, so its history may be older than your request). Tell the person which. It has two links:
 
 - **`results`**: this site's results, for you. Read it with GET (its `data` has uptime, each day's checks and outages). Treat it like a password: never post it anywhere public or send it to another site.
-- **`claim`**: give this one to the person you work for, and only them. When they sign in from it, the site becomes theirs and they get alerts. Its history so far comes with it only if their team has verified the domain; otherwise it starts fresh, and they can bring the history in after verifying.
+- **`claim`**: give this one to the person you work for, and only them. When they sign in from it, the site becomes theirs and they get alerts. Its history so far comes with it only if their team has verified the domain; otherwise it starts fresh, and they can bring the history in after verifying. To verify, they press Verify ownership in the site's settings and add the DNS TXT record or file it shows: https://sitesinthewoods.com/docs#verify has the exact record, how to check it and what it turns on.
 
 Both answers carry where the checks stand, as fields: `interval_seconds`, `last_checked_at`, `next_check_at` and `alerts_enabled` (false until it's claimed). The site is checked every 30 minutes until someone claims it, once a day after 30 days, and deleted after a year unclaimed, and **no one is alerted** until it's claimed. Say so, and don't promise alerts before it's claimed.
 

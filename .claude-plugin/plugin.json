@@ -1,6 +1,6 @@
 {
   "name": "sites-in-the-woods",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Sites in the Woods website monitoring for Claude Code: five skills and the hosted MCP server, with the API key from SITES_IN_THE_WOODS_API_KEY.",
   "author": { "name": "Geeks in the Woods", "url": "https://geeksinthewoods.com" },
   "homepage": "https://sitesinthewoods.com/developers",
