@@ -20,6 +20,7 @@ Usage:
   sites-in-the-woods maintenance start <slug> [--minutes <n>] [--reason <text>]
   sites-in-the-woods maintenance end <slug>         alerts go out again (safe to repeat)
   sites-in-the-woods mcp                            the hosted MCP server over stdio
+  sites-in-the-woods check <domain> [--private]     one look at any site, scored A to F (no key needed)
 
 Options:
   --json        the API's own JSON
@@ -28,7 +29,7 @@ Options:
 
 The key: create one on your team's API keys page (https://sitesinthewoods.com/api-keys) and keep
 it in ${KEY_ENV}; it's never taken as an argument. ${URL_ENV} points at another dashboard.
-Maintenance needs a Member or Admin key. Docs: https://sitesinthewoods.com/developers
+Maintenance needs a Member or Admin key; check needs none. Docs: https://sitesinthewoods.com/developers
 `;
 
 export interface Io {
@@ -54,6 +55,25 @@ export function parseArgs(argv: string[]): { words: string[]; flags: Record<stri
   return { words, flags };
 }
 
+/** The free check: no key. Exits 0 when it was read and scored, 1 when it couldn't be. */
+async function check(api: SitesInTheWoods, domain: string | undefined, flags: Record<string, string | true>, io: Io): Promise<number> {
+  if (!domain) return io.err("Which site? sites-in-the-woods check <domain>\n"), 1;
+  try {
+    const r = await api.check(domain, { private: !!flags.private });
+    if (flags.json) return io.out(`${JSON.stringify(r, null, 2)}\n`), 0;
+    if (!r.score) return io.out(`${r.domain}: ${r.unreachable ?? (r.opted_out ? "its robots.txt asks our scanner not to look." : "not scored.")}\n`), 1;
+    io.out(`${r.domain}: ${r.score.grade} · ${r.score.word}, ${r.score.score} of 100${r.fresh ? " (a report from the last few minutes)" : ""}\n${r.score.verdict}\n${r.score.covers}\n`);
+    const fixes = r.findings.filter((f) => f.fix && (f.state === "warn" || f.state === "missing")).sort((a, b) => (b.gain ?? 0) - (a.gain ?? 0));
+    if (fixes.length) io.out(`\nTo fix:\n${fixes.map((f) => `  ${f.label}${f.gain ? ` (+${f.gain})` : ""}: ${f.fix}`).join("\n")}\n`);
+    io.out(`\nReport: ${r.report}\nFor a coding agent: ${r.markdown}\n`);
+    return 0;
+  } catch (e) {
+    if (!(e instanceof ApiError)) throw e;
+    io.err(`${e.message}${e.retryAfterS ? `\nRetry in ${e.retryAfterS} seconds.` : ""}\n`);
+    return 1;
+  }
+}
+
 const pct = (r: Ratio | null | undefined) => (r && r.total ? `${(Math.floor((r.ok / r.total) * 1000) / 10).toFixed(1)}%` : "–");
 const pad = (s: string, n: number) => (s.length >= n ? s : s + " ".repeat(n - s.length));
 
@@ -65,6 +85,7 @@ export async function main(argv: string[], io: Io = { out: (s) => process.stdout
   const [command, sub, arg] = words;
   if (command === "mcp") return await runBridge(), 0;
   const api = client ?? new SitesInTheWoods({ userAgent: `sites-in-the-woods/${VERSION}` });
+  if (command === "check") return await check(api, sub, flags, io);
   if (!api.hasKey) {
     io.err(`No key: set ${KEY_ENV} to a key from your team's API keys page (https://sitesinthewoods.com/api-keys).\n`);
     return 2;

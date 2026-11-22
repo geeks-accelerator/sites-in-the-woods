@@ -23,6 +23,12 @@ function handle(req: IncomingMessage, res: ServerResponse, body: string) {
     }
     return json(200, { jsonrpc: "2.0", id: msg.id, result: { session: req.headers["mcp-session-id"] ?? null } });
   }
+  // The free check: keyless, answered whole (not in data).
+  if (req.url === "/check" && req.method === "POST") {
+    const { domain } = JSON.parse(body) as { domain: string };
+    if (domain === "busy.test") return (res.writeHead(503, { "content-type": "application/problem+json", "retry-after": "60" }), res.end(JSON.stringify({ title: "Busy", status: 503, detail: "We're looking at a lot of sites right now. Try again in a minute.", error: "busy" })));
+    return json(200, { domain, host: domain, checked_at: "2026-11-22T00:00:00Z", report: `${base}/check/${domain}/r1`, data: `${base}/check/${domain}/r1/data.json`, markdown: `${base}/check/${domain}/r1/report.md`, fresh: false, private: false, unreachable: null, opted_out: false, score: { score: 81, grade: "B", word: "Mostly ready", verdict: "Search engines and agents can reach it.", covers: "The score covers only what this look read.", cap: null, with_every_fix: 100 }, findings: [{ id: "agents.llms_txt", label: "llms.txt", state: "missing", text: "None at /llms.txt.", fix: "Add /llms.txt.", gain: 9 }, { id: "robots", label: "robots.txt", state: "ok", text: "Fine." }], message: "Looked just now." });
+  }
   if (req.headers.authorization !== `Bearer ${KEY}`)
     return json(401, { type: "/api/docs#error-unauthorized", title: "Unauthorized", status: 401, detail: "Sign in, or send an API key.", error: "unauthorized", message: "Sign in, or send an API key.", suggestion: "Send Authorization: Bearer sm_…" }, "application/problem+json");
   if (req.url === "/api/status")
@@ -53,6 +59,26 @@ const run = async (argv: string[], key = KEY) => {
   const code = await main(argv, { out: (s) => (out += s), err: (s) => (err += s) }, new SitesInTheWoods({ key, baseUrl: base }));
   return { code, out, err };
 };
+
+describe("check: one look at any site, with no key", () => {
+  it("prints the grade, what it covers and the fixes, and never sends a key", async () => {
+    const r = await run(["check", "example.com"]);
+    expect(r.code).toBe(0);
+    expect(r.out).toContain("example.com: B · Mostly ready, 81 of 100");
+    expect(r.out).toContain("The score covers only what this look read.");
+    expect(r.out).toContain("llms.txt (+9): Add /llms.txt.");
+    expect(r.out).toContain("/check/example.com/r1/report.md");
+    const sent = seen.filter((x) => x.url === "/check").at(-1)!;
+    expect([sent.method, sent.auth, JSON.parse(sent.body)]).toEqual(["POST", undefined, { domain: "example.com" }]);
+  });
+
+  it("works with no key set, sends private, and says when to retry", async () => {
+    expect((await run(["check", "example.com", "--private", "--json"], "")).code).toBe(0);
+    expect(JSON.parse(seen.filter((x) => x.url === "/check").at(-1)!.body)).toEqual({ domain: "example.com", private: true });
+    const busy = await run(["check", "busy.test"]);
+    expect([busy.code, busy.err]).toEqual([1, "We're looking at a lot of sites right now. Try again in a minute.\nRetry in 60 seconds.\n"]);
+  });
+});
 
 describe("the CLI", () => {
   it("says what's down, and exits 3 when a site is", async () => {

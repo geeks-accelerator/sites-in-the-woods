@@ -79,6 +79,24 @@ export interface MaintenanceWindow {
   reason: string | null;
 }
 
+/** One look at a site: the free check's answer (POST /check), as https://sitesinthewoods.com/start/openapi.json describes it. */
+export interface CheckReport {
+  domain: string;
+  host: string;
+  checked_at: string;
+  report: string;
+  data: string;
+  markdown: string;
+  fresh: boolean;
+  private: boolean;
+  unreachable: string | null;
+  opted_out: boolean;
+  score: { score: number; grade: "A" | "B" | "C" | "D" | "F"; word: string; verdict: string; covers: string; cap: string | null; with_every_fix: number | null; [more: string]: unknown } | null;
+  findings: Array<{ id: string; label: string; state: "ok" | "warn" | "missing" | "na" | "unknown"; text: string; fix?: string; gain?: number; [more: string]: unknown }>;
+  message: string;
+  [more: string]: unknown;
+}
+
 /** The API said no: its problem details (RFC 9457), and what to do next. */
 export class ApiError extends Error {
   readonly status: number;
@@ -146,6 +164,15 @@ export class SitesInTheWoods {
     return this.get("/api/domains");
   }
 
+  /**
+   * One look at any site, scored A to F: what search engines and agents find. Needs no key, and the key is never
+   * sent. `private` keeps the report off the domain's public page. One look per domain every 10 minutes: a
+   * newer report is answered instead (`fresh`).
+   */
+  check(domain: string, o: { private?: boolean } = {}): Promise<CheckReport> {
+    return this.request("POST", "/check", { domain, ...(o.private ? { private: true } : {}) }, { keyless: true });
+  }
+
   /** Hold a site's alerts for a deploy (checks still run). Needs a Member or Admin key. */
   startMaintenance(slug: string, o: { minutes?: number; reason?: string } = {}): Promise<MaintenanceWindow> {
     return this.post(`/api/sites/${encodeURIComponent(slug)}/maintenance/start`, o);
@@ -164,9 +191,10 @@ export class SitesInTheWoods {
     return this.request<T>("POST", path, body);
   }
 
-  private async request<T>(method: "GET" | "POST", path: string, body?: Record<string, unknown>): Promise<T> {
+  /** `keyless`: a route outside the team API (the free check), answered as a whole, not in `data`, and never sent the key. */
+  private async request<T>(method: "GET" | "POST", path: string, body?: Record<string, unknown>, o: { keyless?: boolean } = {}): Promise<T> {
     const headers: Record<string, string> = { accept: "application/json", "user-agent": this.userAgent };
-    if (this.key) headers.authorization = `Bearer ${this.key}`;
+    if (this.key && !o.keyless) headers.authorization = `Bearer ${this.key}`;
     if (body) headers["content-type"] = "application/json";
     const res = await this.fetcher(`${this.baseUrl}${path}`, { method, headers, ...(body ? { body: JSON.stringify(body) } : {}) });
     const text = await res.text();
@@ -177,6 +205,6 @@ export class SitesInTheWoods {
       throw new ApiError(res.status, { detail: `The API answered ${res.status} without JSON.` }, null);
     }
     if (!res.ok) throw new ApiError(res.status, json, res.headers.get("retry-after"));
-    return json.data as T;
+    return (o.keyless ? json : json.data) as T;
   }
 }

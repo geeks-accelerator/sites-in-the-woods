@@ -26,6 +26,15 @@ npx sites-in-the-woods site <slug>       # one site in detail, as JSON
 
 Add `--json` for the API's own JSON.
 
+### Check any site, with no key
+
+```sh
+npx sites-in-the-woods check example.com            # scored A to F, with each fix and the report's address
+npx sites-in-the-woods check example.com --private  # kept only at its own address, off the domain's public page
+```
+
+One look at what search engines and agents find: robots.txt, the homepage, the sitemap, the 404 page and the files agents look for. It needs no key, and the key is never sent. In code: `new SitesInTheWoods().check("example.com")`.
+
 ### In a deploy
 
 Hold a site's alerts while you deploy (its checks still run), then let them go:
