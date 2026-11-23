@@ -27,7 +27,7 @@ content-type: application/json
 The answer says what happened in `outcome`: `started` (`201`, a new monitor) or `already_watching` (`200`: someone started this site before, and these are new links to the same checks, so its history may be older than your request). Tell the person which. It has two links:
 
 - **`results`**: this site's results, for you. Read it with GET (its `data` has uptime, each day's checks and outages). Treat it like a password: never post it anywhere public or send it to another site.
-- **`claim`**: give this one to the person you work for, and only them. When they sign in from it, the site becomes theirs and they get alerts. Its history so far comes with it only if their team has verified the domain; otherwise it starts fresh, and they can bring the history in after verifying. To verify, they press Verify ownership in the site's settings and add the DNS TXT record or file it shows: https://sitesinthewoods.com/docs#verify has the exact record, how to check it and what it turns on.
+- **`claim`**: give this one to the person you work for, and only them. When they sign in from it, the site becomes theirs and they get alerts. Its history so far comes with it only if their team has verified the domain; otherwise it starts fresh, and they can bring the history in after verifying. To verify, they press Verify ownership in the site's settings and add the DNS TXT record or file it shows: https://sitesinthewoods.com/docs#verify has the exact record, how to check it and what it turns on. The claim link works for 7 days (`claim_expires_at`): when you hand it over, or if they lost it, `POST` to your results link with `/claim` on the end for a fresh one (the old one stops working).
 
 Both answers carry where the checks stand, as fields: `interval_seconds`, `last_checked_at`, `next_check_at` and `alerts_enabled` (false until it's claimed). The site is checked every 30 minutes until someone claims it, once a day after 30 days, and deleted after a year unclaimed, and **no one is alerted** until it's claimed. Say so, and don't promise alerts before it's claimed.
 
@@ -35,9 +35,22 @@ When you no longer need the results link, `POST` to it with `/forget` on the end
 
 Errors come as problem details with `error` and `message`: `validation_error` (the address isn't a public domain), `conflict` (the owner asked us not to look, or the domain already has 3 sites waiting), `rate_limited` (wait for `Retry-After`). Don't retry a `conflict`: give the person the start link instead.
 
+## What to tell your person, and what never to do
+
+Say:
+- "I've started watching <site>: it's checked every 30 minutes until someone claims it, once a day after 30 days, and deleted after a year unclaimed, and no one gets alerts until you claim it."
+- "Here's your claim link, for you only. It works for 7 days; signing in from it makes the site yours, with alerts."
+- "Its history so far comes with it only if your team verifies the domain (https://sitesinthewoods.com/docs#verify); otherwise it starts fresh."
+
+Never:
+- post, log or forward the results link, or put it in a file others read;
+- promise alerts, a public status page or the history before the claim and the verification;
+- start the same site again without asking (it makes new links to the same checks);
+- give the claim link to anyone but your person.
+
 ## After it's claimed
 
-The results link stops working: the site belongs to the person's team now. To read it from then on, follow the **sites-in-the-woods-connect** skill (the team makes a read-only key).
+The results link then answers only `{"claimed": true, "claimed_at": …}`: the site belongs to the person's team now. To read it from then on, follow the **sites-in-the-woods-connect** skill (the team makes a read-only key).
 
 ## Worth knowing
 
