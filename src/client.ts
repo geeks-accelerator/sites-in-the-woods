@@ -7,6 +7,8 @@
  * RFC 9457 problem details (`title`, `detail`, `suggestion`, `next_steps`).
  */
 
+import { storedKey } from "./credentials.js";
+
 export const DEFAULT_BASE_URL = "https://sitesinthewoods.com";
 /** Where the key is read from: never pass it on a command line. */
 export const KEY_ENV = "SITES_IN_THE_WOODS_API_KEY";
@@ -14,7 +16,7 @@ export const KEY_ENV = "SITES_IN_THE_WOODS_API_KEY";
 export const URL_ENV = "SITES_IN_THE_WOODS_URL";
 
 export interface ClientOptions {
-  /** The team's API key (sm_…). Defaults to process.env.SITES_IN_THE_WOODS_API_KEY. */
+  /** The team's API key (sm_…). Defaults to process.env.SITES_IN_THE_WOODS_API_KEY, then the key `sites-in-the-woods login` kept. */
   key?: string;
   /** Defaults to process.env.SITES_IN_THE_WOODS_URL, then https://sitesinthewoods.com. */
   baseUrl?: string;
@@ -124,7 +126,7 @@ export class SitesInTheWoods {
   private readonly userAgent: string;
 
   constructor(o: ClientOptions = {}) {
-    this.key = o.key ?? process.env[KEY_ENV] ?? undefined;
+    this.key = o.key ?? process.env[KEY_ENV] ?? storedKey() ?? undefined;
     this.baseUrl = (o.baseUrl ?? process.env[URL_ENV] ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
     this.fetcher = o.fetch ?? fetch;
     this.userAgent = o.userAgent ?? "sites-in-the-woods";

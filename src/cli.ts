@@ -6,6 +6,11 @@
 import { readFileSync } from "node:fs";
 import { ApiError, KEY_ENV, SitesInTheWoods, URL_ENV, type Incident, type Ratio } from "./client.js";
 import { runBridge } from "./mcp-bridge.js";
+import { homedir } from "node:os";
+import { forgetKey, keyFile, storedKey, storeKey } from "./credentials.js";
+
+/** Our CLI's OAuth client id: the dashboard's device grant is for it alone. */
+const CLIENT_ID = "sites-in-the-woods-cli";
 
 const VERSION = (JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string }).version;
 
@@ -21,14 +26,17 @@ Usage:
   sites-in-the-woods maintenance end <slug>         alerts go out again (safe to repeat)
   sites-in-the-woods mcp                            the hosted MCP server over stdio
   sites-in-the-woods check <domain> [--private]     one look at any site, scored A to F (no key needed)
+  sites-in-the-woods login                          sign in: approve a code in your browser, and the key is kept here
+  sites-in-the-woods logout                         revoke that key and forget it
 
 Options:
   --json        the API's own JSON
   --help, -h    this
   --version     ${VERSION}
 
-The key: create one on your team's API keys page (https://sitesinthewoods.com/api-keys) and keep
-it in ${KEY_ENV}; it's never taken as an argument. ${URL_ENV} points at another dashboard.
+The key: sign in with \`sites-in-the-woods login\` (kept at ${keyFile().replace(homedir(), "~")}, only you can read it),
+or create one on your team's API keys page and keep it in ${KEY_ENV}, which wins when set. It's never
+taken as an argument or printed. ${URL_ENV} points at another dashboard.
 Maintenance needs a Member or Admin key; check needs none. Docs: https://sitesinthewoods.com/developers
 `;
 
@@ -55,6 +63,45 @@ export function parseArgs(argv: string[]): { words: string[]; flags: Record<stri
   return { words, flags };
 }
 
+/**
+ * Sign in with the device grant (RFC 8628): a code to approve in the browser, then the key, kept in a file only
+ * you can read. The key is never printed. `sleep` is for tests.
+ */
+async function login(base: string, io: Io, fetcher: typeof fetch, sleep: (ms: number) => Promise<void>): Promise<number> {
+  const post = async (path: string, body: Record<string, string>) => {
+    const res = await fetcher(`${base}${path}`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", "user-agent": `sites-in-the-woods/${VERSION}` }, body: new URLSearchParams(body).toString() });
+    return { status: res.status, json: (await res.json().catch(() => ({}))) as Record<string, unknown> };
+  };
+  const start = await post("/oauth/device_authorization", { client_id: CLIENT_ID });
+  if (start.status !== 200 || typeof start.json.device_code !== "string") return io.err(`Couldn't start the sign-in (${String(start.json.error_description ?? start.status)}).\n`), 1;
+  const { device_code: device, user_code: code, verification_uri_complete: url } = start.json as { device_code: string; user_code: string; verification_uri_complete: string };
+  let interval = Number(start.json.interval ?? 5) * 1000;
+  const until = Date.now() + Number(start.json.expires_in ?? 600) * 1000;
+  io.out(`Open ${url}\nand check it shows ${code}, then pick the team and approve. Waiting…\n`);
+  while (Date.now() < until) {
+    await sleep(interval);
+    const r = await post("/oauth/token", { grant_type: "urn:ietf:params:oauth:grant-type:device_code", device_code: device, client_id: CLIENT_ID });
+    if (r.status === 200 && typeof r.json.access_token === "string") {
+      const file = storeKey(r.json.access_token);
+      io.out(`Signed in. The key is kept at ${file.replace(homedir(), "~")} (only you can read it); revoke it any time with sites-in-the-woods logout or on the API keys page.\n`);
+      if (process.env[KEY_ENV]) io.err(`Note: ${KEY_ENV} is set, and it wins over the kept key.\n`);
+      return 0;
+    }
+    if (r.json.error === "slow_down") interval += 5000;
+    else if (r.json.error !== "authorization_pending") return io.err(r.json.error === "access_denied" ? "The sign-in was declined.\n" : "The code expired: run sites-in-the-woods login again.\n"), 1;
+  }
+  return io.err("The code expired: run sites-in-the-woods login again.\n"), 1;
+}
+
+/** Revoke the kept key and forget it. */
+async function logout(base: string, io: Io, fetcher: typeof fetch): Promise<number> {
+  const key = storedKey();
+  if (!key) return io.out("Not signed in here.\n"), 0;
+  await fetcher(`${base}/oauth/revoke`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ token: key, client_id: CLIENT_ID }).toString() }).catch(() => null);
+  forgetKey();
+  return io.out("Signed out: the key is revoked and forgotten.\n"), 0;
+}
+
 /** The free check: no key. Exits 0 when it was read and scored, 1 when it couldn't be. */
 async function check(api: SitesInTheWoods, domain: string | undefined, flags: Record<string, string | true>, io: Io): Promise<number> {
   if (!domain) return io.err("Which site? sites-in-the-woods check <domain>\n"), 1;
@@ -78,7 +125,7 @@ const pct = (r: Ratio | null | undefined) => (r && r.total ? `${(Math.floor((r.o
 const pad = (s: string, n: number) => (s.length >= n ? s : s + " ".repeat(n - s.length));
 
 /** Runs one command; the exit code. */
-export async function main(argv: string[], io: Io = { out: (s) => process.stdout.write(s), err: (s) => process.stderr.write(s) }, client?: SitesInTheWoods): Promise<number> {
+export async function main(argv: string[], io: Io = { out: (s) => process.stdout.write(s), err: (s) => process.stderr.write(s) }, client?: SitesInTheWoods, o: { fetch?: typeof fetch; sleep?: (ms: number) => Promise<void> } = {}): Promise<number> {
   const { words, flags } = parseArgs(argv);
   if (flags.version) return io.out(`${VERSION}\n`), 0;
   if (flags.help || words.length === 0) return io.out(HELP), words.length === 0 && !flags.help ? 1 : 0;
@@ -86,8 +133,10 @@ export async function main(argv: string[], io: Io = { out: (s) => process.stdout
   if (command === "mcp") return await runBridge(), 0;
   const api = client ?? new SitesInTheWoods({ userAgent: `sites-in-the-woods/${VERSION}` });
   if (command === "check") return await check(api, sub, flags, io);
+  if (command === "login") return await login(api.baseUrl, io, o.fetch ?? fetch, o.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))));
+  if (command === "logout") return await logout(api.baseUrl, io, o.fetch ?? fetch);
   if (!api.hasKey) {
-    io.err(`No key: set ${KEY_ENV} to a key from your team's API keys page (https://sitesinthewoods.com/api-keys).\n`);
+    io.err(`No key: run sites-in-the-woods login, or set ${KEY_ENV} to a key from your team's API keys page (https://sitesinthewoods.com/api-keys).\n`);
     return 2;
   }
   const json = (v: unknown) => io.out(`${JSON.stringify(v, null, 2)}\n`);

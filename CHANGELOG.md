@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.0
+
+`login` and `logout`: the CLI signs in with a code you approve in the browser (the dashboard's OAuth device grant), and keeps the key it's given in `~/.config/sites-in-the-woods/key` (mode 600; `$XDG_CONFIG_HOME` respected). `SITES_IN_THE_WOODS_API_KEY` still wins when set. The key is never printed; `logout` revokes it and deletes the file. The SDK and the MCP bridge read the kept key too.
+
 ## 0.3.0
 
 `check <domain>` in the CLI and `check()` in the SDK: one look at any site through the free check (`POST /check`), scored A to F, with what it covers, each fix and the report's address. It needs no key, and the key is never sent. `--private` keeps the report off the domain's public page. The start skill as served on 2026-11-22: it names the free check from code, and how the person verifies their domain (`/docs#verify`). The plugin manifests are at 0.3.0.

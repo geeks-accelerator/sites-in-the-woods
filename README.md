@@ -6,7 +6,13 @@ Docs for developers and agents: [sitesinthewoods.com/developers](https://sitesin
 
 ## The key
 
-Create a key on your team's [API keys page](https://sitesinthewoods.com/api-keys) and keep it in the environment, never on a command line:
+Sign in once, and the CLI keeps a key for you in a file only you can read (`~/.config/sites-in-the-woods/key`):
+
+```sh
+npx sites-in-the-woods login
+```
+
+It shows a code; approve it in your browser, pick the team and what the key may do. `sites-in-the-woods logout` revokes it. For scripts and CI, create a key on your team's [API keys page](https://sitesinthewoods.com/api-keys) and keep it in the environment instead (it wins when set), never on a command line:
 
 ```sh
 export SITES_IN_THE_WOODS_API_KEY=sm_…

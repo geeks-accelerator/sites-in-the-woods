@@ -4,6 +4,7 @@
  * the environment, and each answer is written to stdout, one per line. Notifications get no
  * answer. Nothing is logged but our own one-line errors, to stderr.
  */
+import { storedKey } from "./credentials.js";
 import { createInterface } from "node:readline";
 import { DEFAULT_BASE_URL, KEY_ENV, URL_ENV } from "./client.js";
 
@@ -37,7 +38,7 @@ export function messagesOf(contentType: string, body: string): unknown[] {
 }
 
 export async function runBridge(o: BridgeOptions = {}): Promise<void> {
-  const key = o.key ?? process.env[KEY_ENV];
+  const key = o.key ?? process.env[KEY_ENV] ?? storedKey();
   const url = `${(o.baseUrl ?? process.env[URL_ENV] ?? DEFAULT_BASE_URL).replace(/\/+$/, "")}/mcp`;
   const fetcher = o.fetch ?? fetch;
   const out = o.output ?? process.stdout;

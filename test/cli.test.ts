@@ -6,6 +6,8 @@ import { main, parseArgs } from "../src/cli.js";
 import { messagesOf, runBridge } from "../src/mcp-bridge.js";
 
 const KEY = "sm_test_key";
+const STORED = `sm_${"k".repeat(43)}`;
+let polls = 0;
 const seen: Array<{ method: string; url: string; auth: string | undefined; body: string }> = [];
 let server: Server;
 let base = "";
@@ -29,6 +31,10 @@ function handle(req: IncomingMessage, res: ServerResponse, body: string) {
     if (domain === "busy.test") return (res.writeHead(503, { "content-type": "application/problem+json", "retry-after": "60" }), res.end(JSON.stringify({ title: "Busy", status: 503, detail: "We're looking at a lot of sites right now. Try again in a minute.", error: "busy" })));
     return json(200, { domain, host: domain, checked_at: "2026-11-22T00:00:00Z", report: `${base}/check/${domain}/r1`, data: `${base}/check/${domain}/r1/data.json`, markdown: `${base}/check/${domain}/r1/report.md`, fresh: false, private: false, unreachable: null, opted_out: false, score: { score: 81, grade: "B", word: "Mostly ready", verdict: "Search engines and agents can reach it.", covers: "The score covers only what this look read.", cap: null, with_every_fix: 100 }, findings: [{ id: "agents.llms_txt", label: "llms.txt", state: "missing", text: "None at /llms.txt.", fix: "Add /llms.txt.", gain: 9 }, { id: "robots", label: "robots.txt", state: "ok", text: "Fine." }], message: "Looked just now." });
   }
+  // The device sign-in: pending once, then the key; /oauth/revoke always 200.
+  if (req.url === "/oauth/device_authorization") return json(200, { device_code: "od_x", user_code: "BCDF-GHJK", verification_uri: `${base}/device`, verification_uri_complete: `${base}/device?code=BCDF-GHJK`, expires_in: 600, interval: 5 });
+  if (req.url === "/oauth/token") return polls++ === 0 ? json(400, { error: "authorization_pending" }) : json(200, { access_token: STORED, token_type: "Bearer", scope: "sites:read" });
+  if (req.url === "/oauth/revoke") return res.writeHead(200).end();
   if (req.headers.authorization !== `Bearer ${KEY}`)
     return json(401, { type: "/api/docs#error-unauthorized", title: "Unauthorized", status: 401, detail: "Sign in, or send an API key.", error: "unauthorized", message: "Sign in, or send an API key.", suggestion: "Send Authorization: Bearer sm_…" }, "application/problem+json");
   if (req.url === "/api/status")
@@ -157,5 +163,41 @@ describe("the MCP bridge", () => {
     expect(lines[1]!.result).toEqual({ session: "s1" });
     expect(lines[2]!.error).toBeTruthy();
     expect(seen.every((s) => s.auth === `Bearer ${KEY}`)).toBe(true);
+  });
+});
+
+describe("login and logout: the device sign-in, with the key kept in a file only you can read", () => {
+  it("shows the code to approve, waits, keeps the key without printing it, and logout revokes and forgets it", async () => {
+    const { mkdtempSync, statSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const { keyFile, storedKey } = await import("../src/credentials.js");
+    const home = mkdtempSync(join(tmpdir(), "sitw-"));
+    const before = { xdg: process.env.XDG_CONFIG_HOME, key: process.env.SITES_IN_THE_WOODS_API_KEY };
+    process.env.XDG_CONFIG_HOME = home;
+    delete process.env.SITES_IN_THE_WOODS_API_KEY;
+    try {
+      let out = "";
+      let err = "";
+      const io = { out: (s: string) => (out += s), err: (s: string) => (err += s) };
+      const code = await main(["login"], io, new SitesInTheWoods({ key: "", baseUrl: base }), { sleep: async () => {} });
+      expect(code).toBe(0);
+      expect(out).toContain(`${base}/device?code=BCDF-GHJK`);
+      expect(out + err).not.toContain(STORED);
+      expect(storedKey()).toBe(STORED);
+      expect(statSync(keyFile()).mode & 0o777).toBe(0o600);
+      expect(seen.filter((x) => x.url === "/oauth/token").at(-1)!.body).toContain("client_id=sites-in-the-woods-cli");
+      // The client and the bridge read the kept key when the environment has none.
+      expect(new SitesInTheWoods({ baseUrl: base }).hasKey).toBe(true);
+      out = "";
+      expect(await main(["logout"], io, new SitesInTheWoods({ key: "", baseUrl: base }))).toBe(0);
+      expect(out).toContain("revoked and forgotten");
+      expect(seen.filter((x) => x.url === "/oauth/revoke").at(-1)!.body).toContain(`token=${STORED}`);
+      expect(storedKey()).toBeUndefined();
+    } finally {
+      if (before.xdg === undefined) delete process.env.XDG_CONFIG_HOME;
+      else process.env.XDG_CONFIG_HOME = before.xdg;
+      if (before.key !== undefined) process.env.SITES_IN_THE_WOODS_API_KEY = before.key;
+    }
   });
 });
