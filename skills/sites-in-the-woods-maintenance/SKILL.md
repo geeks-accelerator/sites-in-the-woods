@@ -22,6 +22,7 @@ Both need a team with 10 sites or more.
 - End it: `POST /api/sites/{slug}/maintenance/end`. Alerts held during it are then sent, once, if the problem is still there.
 - Pause or resume: `POST /api/sites/{slug}/pause`, `POST /api/sites/{slug}/resume`.
 - See a site's windows: `GET /api/sites/{slug}/maintenance`.
+- From a deploy script, with no API key: the site's maintenance URL (an admin makes it in the site's settings). `POST <url>/start?minutes=45`, then `POST <url>/end`; see https://sitesinthewoods.com/docs#deploys. A 403 on the API routes above (a viewer key, or a team below the plan's write threshold) doesn't stop this URL.
 
 ## How to make any change
 

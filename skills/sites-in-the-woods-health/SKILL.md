@@ -1,6 +1,6 @@
 ---
 name: sites-in-the-woods-health
-description: "Find out what's wrong with a team's websites and why, using the team's Sites in the Woods API key or MCP server: what's down now, open incidents with their likely causes, uptime, and domains or TLS certificates about to expire; and, with a Member or Admin key, ask for a check again or dismiss an incident as noise. Use when a team that monitors its sites with Sites in the Woods asks whether their sites are OK, what broke and why, or when a domain or certificate it watches expires. Not for a domain or certificate question without a Sites in the Woods account (a registrar, a one-off SSL check), maintenance windows or pausing a site (use sites-in-the-woods-maintenance), or public sites without a key (use sites-in-the-woods-status)."
+description: "Find out what's wrong with a team's websites and why, using the team's Sites in the Woods API key or MCP server: what's down now, open incidents with their likely causes, uptime, and domains or TLS certificates about to expire; and, with a Member key, ask for a check again or dismiss an incident as noise. Use when a team that monitors its sites with Sites in the Woods asks whether their sites are OK, what broke and why, or when a domain or certificate it watches expires. Not for a domain or certificate question without a Sites in the Woods account (a registrar, a one-off SSL check), maintenance windows or pausing a site (use sites-in-the-woods-maintenance), or public sites without a key (use sites-in-the-woods-status)."
 ---
 
 # What's wrong with our sites, and why

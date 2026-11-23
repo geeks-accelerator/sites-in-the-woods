@@ -70,6 +70,8 @@ claude mcp add --transport http sites-in-the-woods https://sitesinthewoods.com/m
 
 Without MCP, call the API with `Authorization: Bearer $SITES_IN_THE_WOODS_API_KEY`.
 
+**Without a key:** an MCP client that signs in with OAuth needs only the address `https://sitesinthewoods.com/mcp`; the person signs in in their browser and picks the team and a role (no higher than their own). From a terminal, `npx sites-in-the-woods login` does the same with a code they approve in the browser.
+
 ## 4. Check it
 
 Call the MCP tool `status`, or `GET https://sitesinthewoods.com/api/status`. A 200 means you're connected; a 401 means the key is missing, mistyped or revoked (ask for a new one, don't retry); a 503 means the key couldn't be checked right now (wait for `Retry-After`).
